@@ -1,35 +1,43 @@
 pipeline {
     agent any
+    environment {
+        AZURE_CREDENTIALS_ID = 'jenkins-pipeline-sp'
+        RESOURCE_GROUP = 'bewwebserivce'
+        APP_SERVICE_NAME = 'webappname01'
+    }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/aksh047/WebApiJenkins.git'
+                git branch: 'master', url: 'https://github.com/aksh047/WebApiJenkins.git'
             }
         }
 
         stage('Build') {
             steps {
-                bat 'dotnet build'  // Use 'sh' instead of 'bat' if on Linux
+                bat 'dotnet restore'
+                bat 'dotnet build --configuration Release'
+                bat 'dotnet publish -c Release -o ./publish'
             }
         }
 
-        stage('Test') {
+        stage('Deploy') {
             steps {
-                bat 'dotnet test'  // Runs unit tests
-            }
-        }
-
-        stage('Publish') {
-            steps {
-                bat 'dotnet publish -c Release -o output'  // Publish app to output directory
-            }
-        }
-
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: 'output/**', fingerprint: true
+                withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
+                    bat "az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID"
+                    bat "powershell Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip -Force"
+                    bat "az webapp deploy --resource-group $RESOURCE_GROUP --name $APP_SERVICE_NAME --src-path ./publish.zip --type zip"
+                }
             }
         }
     }
-}
+
+    post {
+        success {
+            echo 'Deployment Successful!'
+        }
+        failure {
+            echo 'Deployment Failed!'
+        }
+    }
+} why pipleine is not being created
