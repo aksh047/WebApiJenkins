@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'windows' } // Ensure the agent is a Windows node
+    agent any // Ensure the agent is a Windows node
 
     environment {
         AZURE_CREDENTIALS_ID = 'jenkins-pipeline-sp'
