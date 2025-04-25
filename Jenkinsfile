@@ -24,19 +24,20 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                withCredentials([azureServicePrincipal(credentialsId: AZURE_CREDENTIALS_ID)]) {
-                    script {
-                        def azureCredentials = readJSON(text: env.AZURE_CREDENTIALS_ID)
-                        def clientId = azureCredentials.clientId
-                        def clientSecret = azureCredentials.clientSecret
-                        def tenantId = azureCredentials.tenantId
-
-                        bat """
-                            az login --service-principal -u ${clientId} -p ${clientSecret} --tenant ${tenantId}
-                            powershell Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip -Force
-                            az webapp deploy --resource-group ${RESOURCE_GROUP} --name ${APP_SERVICE_NAME} --src-path ./publish.zip --type zip
-                        """
-                    }
+                withCredentials([
+                    azureServicePrincipal(
+                        credentialsId: AZURE_CREDENTIALS_ID,
+                        subscriptionIdVariable: 'AZURE_SUBSCRIPTION_ID',
+                        clientIdVariable: 'AZURE_CLIENT_ID',
+                        clientSecretVariable: 'AZURE_CLIENT_SECRET',
+                        tenantIdVariable: 'AZURE_TENANT_ID'
+                    )
+                ]) {
+                    bat """
+                        az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
+                        powershell Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip -Force
+                        az webapp deploy --resource-group ${RESOURCE_GROUP} --name ${APP_SERVICE_NAME} --src-path ./publish.zip --type zip
+                    """
                 }
             }
         }
